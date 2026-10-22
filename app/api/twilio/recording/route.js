@@ -1,7 +1,8 @@
 import { after } from "next/server";
 import { supabase } from "../../../lib/supabase";
+import { extraireInfos } from "../../../lib/extraction";
 
-// Laisse jusqu'à 60 s au téléchargement + à la transcription
+// Laisse jusqu'à 60 s au téléchargement + transcription + extraction
 export const maxDuration = 60;
 
 async function telechargerAudio(recordingUrl) {
@@ -47,6 +48,7 @@ export async function POST(request) {
   const form = await request.formData();
   const data = Object.fromEntries(form);
   const callSid = data.CallSid;
+  const dateAppel = new Date();
 
   console.log("Appel reçu :", {
     callSid,
@@ -66,7 +68,7 @@ export async function POST(request) {
   );
   if (error) console.error("Erreur base :", error);
 
-  // 2. Après avoir répondu à Twilio : audio puis transcription
+  // 2. Après avoir répondu à Twilio : audio, transcription, extraction
   if (data.RecordingUrl) {
     after(async () => {
       try {
@@ -92,6 +94,27 @@ export async function POST(request) {
           .update({ transcription: texte })
           .eq("call_sid", callSid);
         console.log("Transcription :", texte);
+
+        // Extraction
+        const infos = await extraireInfos(texte, dateAppel);
+        const { error: errInfos } = await supabase
+          .from("demandes")
+          .update({
+            nom: infos.nom,
+            date_expression: infos.date_expression,
+            date_reservation: infos.date_reservation,
+            heure: infos.heure,
+            nb_personnes: infos.nb_personnes,
+            nb_enfants: infos.nb_enfants,
+            telephone_dicte: infos.telephone_dicte,
+            preferences: infos.preferences,
+            infos_manquantes: infos.infos_manquantes,
+            ambiguites: infos.ambiguites,
+            statut: "a_confirmer",
+          })
+          .eq("call_sid", callSid);
+        if (errInfos) throw errInfos;
+        console.log("Infos extraites :", infos);
       } catch (e) {
         console.error("Erreur traitement :", e);
         await supabase
