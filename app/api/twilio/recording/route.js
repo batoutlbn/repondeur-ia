@@ -1,6 +1,9 @@
 import { after } from "next/server";
 import { supabase } from "../../../lib/supabase";
 
+// Laisse jusqu'à 60 s au téléchargement + à la transcription
+export const maxDuration = 60;
+
 async function telechargerAudio(recordingUrl) {
   const auth = Buffer.from(
     `${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`
@@ -16,6 +19,28 @@ async function telechargerAudio(recordingUrl) {
     await new Promise((r) => setTimeout(r, 2000));
   }
   throw new Error("Audio indisponible après 5 essais");
+}
+
+async function transcrire(audio) {
+  const form = new FormData();
+  form.append("file", new Blob([audio], { type: "audio/mpeg" }), "message.mp3");
+  form.append("model", "gpt-4o-mini-transcribe");
+  form.append("language", "fr");
+  form.append(
+    "prompt",
+    "Message laissé sur le répondeur d'un restaurant pour une demande de réservation."
+  );
+
+  const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+    body: form,
+  });
+  if (!res.ok) {
+    throw new Error(`Transcription échouée : ${res.status} ${await res.text()}`);
+  }
+  const json = await res.json();
+  return json.text;
 }
 
 export async function POST(request) {
@@ -41,10 +66,11 @@ export async function POST(request) {
   );
   if (error) console.error("Erreur base :", error);
 
-  // 2. Après avoir répondu à Twilio : récupérer et stocker l'audio
+  // 2. Après avoir répondu à Twilio : audio puis transcription
   if (data.RecordingUrl) {
     after(async () => {
       try {
+        // Audio
         const audio = await telechargerAudio(data.RecordingUrl);
         const chemin = `${callSid}.mp3`;
 
@@ -57,10 +83,17 @@ export async function POST(request) {
           .from("demandes")
           .update({ audio_path: chemin })
           .eq("call_sid", callSid);
-
         console.log("Audio sauvegardé :", chemin);
+
+        // Transcription
+        const texte = await transcrire(audio);
+        await supabase
+          .from("demandes")
+          .update({ transcription: texte })
+          .eq("call_sid", callSid);
+        console.log("Transcription :", texte);
       } catch (e) {
-        console.error("Erreur audio :", e);
+        console.error("Erreur traitement :", e);
         await supabase
           .from("demandes")
           .update({ statut: "erreur" })
