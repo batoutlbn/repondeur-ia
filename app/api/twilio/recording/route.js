@@ -1,7 +1,7 @@
 import { after } from "next/server";
 import { supabase } from "../../../lib/supabase";
 import { extraireInfos } from "../../../lib/extraction";
-import { supprimerEnregistrement } from "../../../lib/twilio";import { supprimerEnregistrement } from "../../../lib/twilio";
+import { supprimerEnregistrement } from "../../../lib/twilio";
 
 // Laisse jusqu'à 60 s au téléchargement + transcription + extraction
 export const maxDuration = 60;
