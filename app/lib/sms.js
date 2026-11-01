@@ -13,7 +13,7 @@ function nomClient(d) {
 }
 
 function signature() {
-  let s = ` — Restaurant ${RESTAURANT.nom}`;
+  let s = ` - Restaurant ${RESTAURANT.nom}`;
   if (RESTAURANT.telephone) s += ` · ${RESTAURANT.telephone}`;
   return s;
 }
@@ -26,7 +26,7 @@ export function preferencesPlacement(d) {
   );
 }
 
-// Numéro mobile utilisable : d'abord celui dicté, sinon celui de l'appel
+// Numéro mobile utilisable : d'abord celui de l'appel, sinon celui dicté
 export function numeroSMS(d) {
   for (const t of [d.telephone_dicte, d.telephone_appelant]) {
     if (!t) continue;

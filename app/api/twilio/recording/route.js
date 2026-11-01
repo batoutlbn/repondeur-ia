@@ -1,6 +1,7 @@
 import { after } from "next/server";
 import { supabase } from "../../../lib/supabase";
 import { extraireInfos } from "../../../lib/extraction";
+import { supprimerEnregistrement } from "../../../lib/twilio";import { supprimerEnregistrement } from "../../../lib/twilio";
 
 // Laisse jusqu'à 60 s au téléchargement + transcription + extraction
 export const maxDuration = 60;
@@ -86,6 +87,16 @@ export async function POST(request) {
           .update({ audio_path: chemin })
           .eq("call_sid", callSid);
         console.log("Audio sauvegardé :", chemin);
+
+                // Copie faite dans Supabase : on supprime l'original chez Twilio
+        if (data.RecordingSid) {
+          try {
+            await supprimerEnregistrement(data.RecordingSid);
+            console.log("Enregistrement Twilio supprimé :", data.RecordingSid);
+          } catch (e) {
+            console.error("Erreur suppression Twilio :", e);
+          }
+        }
 
         // Transcription
         const texte = await transcrire(audio);
