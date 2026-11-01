@@ -77,6 +77,9 @@ export async function refuserReservation(formData) {
 export async function supprimerDemande(formData) {
   const id = String(formData.get("id"));
 
+  // Double sécurité : la case doit avoir été cochée
+  if (formData.get("confirmation") !== "oui") return;
+
   const { data: d } = await supabase
     .from("demandes")
     .select("audio_path")
@@ -89,6 +92,31 @@ export async function supprimerDemande(formData) {
   }
 
   const { error } = await supabase.from("demandes").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+
+  redirect("/");
+}
+
+export async function supprimerTout(formData) {
+  // Double sécurité : la case doit avoir été cochée
+  if (formData.get("confirmation") !== "oui") return;
+
+  // 1. Audios : on vide le stockage par paquets de 100
+  for (let tour = 0; tour < 50; tour++) {
+    const { data: fichiers, error } = await supabase.storage
+      .from("enregistrements")
+      .list("", { limit: 100 });
+    if (error) throw new Error(error.message);
+    if (!fichiers?.length) break;
+
+    const { error: errSuppr } = await supabase.storage
+      .from("enregistrements")
+      .remove(fichiers.map((f) => f.name));
+    if (errSuppr) throw new Error(errSuppr.message);
+  }
+
+  // 2. Toutes les fiches
+  const { error } = await supabase.from("demandes").delete().not("id", "is", null);
   if (error) throw new Error(error.message);
 
   redirect("/");
