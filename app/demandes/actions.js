@@ -4,10 +4,11 @@ import { redirect } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import { numerosSMS } from "../lib/sms";
 import { envoyerSMS } from "../lib/twilio";
+import { nettoyerSMS, couperSMS } from "../lib/gsm";
 
 async function decider(formData, nouveauStatut, exigerComplet) {
   const id = String(formData.get("id"));
-  const texte = String(formData.get("sms_texte") ?? "").trim().slice(0, 600);
+    const texte = couperSMS(nettoyerSMS(String(formData.get("sms_texte") ?? "").trim()));
   const numeroChoisi = String(formData.get("numero") ?? "");
 
   // Ne change le statut que si la demande est encore "à confirmer".

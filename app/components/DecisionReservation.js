@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Check, X, Users, CalendarDays, Umbrella, MessageCircle, TriangleAlert, RotateCcw } from "lucide-react";
 import BoutonEnvoi from "./BoutonEnvoi";
 import { confirmerReservation, refuserReservation } from "../demandes/actions";
+import { nettoyerSMS, couperSMS, longueurSMS, LIMITE_SMS } from "../lib/gsm";
 
 const MODES = {
   confirmer: {
@@ -140,13 +141,14 @@ export default function DecisionReservation({ mode, id, recap, smsDefaut, numero
                       {/* Texte modifiable */}
                       <textarea
                         value={texte}
-                        onChange={(e) => setTexte(e.target.value)}
+                                                onChange={(e) => setTexte(couperSMS(nettoyerSMS(e.target.value)))}
                         rows={5}
-                        maxLength={600}
                         className="w-full bg-[#f1f0ec] rounded-xl p-3 text-stone-800 leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-[#1f4a3a]"
                       />
                       <div className="flex justify-between items-center mt-2 text-sm text-stone-500">
-                        <span>{texte.length} caractères</span>
+                                                <span className={longueurSMS(texte) >= LIMITE_SMS ? "text-orange-700 font-medium" : ""}>
+                          {longueurSMS(texte)} / {LIMITE_SMS}
+                        </span>
                         {texte !== smsDefaut && (
                           <button
                             type="button"

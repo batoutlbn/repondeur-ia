@@ -1,7 +1,8 @@
 import { formatDateLongue, formatHeure } from "./format";
+import { nettoyerSMS, longueurSMS, couperSMS, LIMITE_SMS } from "./gsm";
 
 // À adapter : nom affiché en fin de SMS, et téléphone du restaurant (optionnel)
-export const RESTAURANT = { nom: "Le Bonnet Blanc", telephone: "" };
+export const RESTAURANT = { nom: "Le Bonnet Blanc", telephone: "0670165625" };
 
 const MOTS_PLACEMENT = [
   "terrasse", "table", "fenêtre", "fenetre", "salle", "intérieur",
@@ -12,17 +13,20 @@ function nomClient(d) {
   return d.nom ? d.nom.replace(/^(monsieur|madame|mme|m\.)\s+/i, "") : null;
 }
 
-function signature() {
-  let s = ` - Restaurant ${RESTAURANT.nom}`;
-  if (RESTAURANT.telephone) s += ` · ${RESTAURANT.telephone}`;
-  return s;
-}
-
 function versMobile(t) {
   if (!t) return null;
   let n = t.replace(/[\s.-]/g, "");
   if (n.startsWith("+33")) n = "0" + n.slice(3);
   return /^0[67]\d{8}$/.test(n) ? "+33" + n.slice(1) : null;
+}
+
+// Prend la première version qui tient dans un seul SMS
+function plusLongQuiTient(versions) {
+  for (const v of versions) {
+    const t = nettoyerSMS(v);
+    if (longueurSMS(t) <= LIMITE_SMS) return t;
+  }
+  return couperSMS(nettoyerSMS(versions[versions.length - 1]));
 }
 
 // Préférences de placement, seulement si le restaurateur les a confirmées
@@ -45,25 +49,36 @@ export function numerosSMS(d) {
 
 export function texteSMS(d) {
   const nom = nomClient(d);
+  const bonjour = `Bonjour${nom ? " " + nom : ""},`;
   const date = formatDateLongue(d.date_reservation)?.toLowerCase();
   const heure = formatHeure(d.heure);
   const n = d.nb_personnes;
   const placement = preferencesPlacement(d);
+  const place = placement.length ? ` (${placement.join(", ").toLowerCase()})` : "";
+  const resto = RESTAURANT.nom;
+  const tel = RESTAURANT.telephone ? ` ${RESTAURANT.telephone}` : "";
 
-  let t = `Bonjour${nom ? " " + nom : ""}, votre réservation pour ${n} personne${n > 1 ? "s" : ""} le ${date} à ${heure} est confirmée`;
-  if (placement.length) t += ` (${placement.join(", ").toLowerCase()})`;
-  return t + `. Au plaisir de vous accueillir !` + signature();
+  return plusLongQuiTient([
+    `${bonjour} votre réservation pour ${n} pers. le ${date} à ${heure}${place} est confirmée. Au plaisir ! - ${resto}${tel}`,
+    `${bonjour} réservation confirmée : ${n} pers. le ${date} à ${heure}${place}. - ${resto}${tel}`,
+    `${bonjour} réservation confirmée : ${n} pers. le ${date} à ${heure}${place}. - ${resto}`,
+    `Réservation confirmée : ${n} pers. le ${date} à ${heure}. - ${resto}`,
+  ]);
 }
 
 export function texteRefus(d) {
   const nom = nomClient(d);
+  const bonjour = `Bonjour${nom ? " " + nom : ""},`;
   const date = formatDateLongue(d.date_reservation)?.toLowerCase();
   const heure = formatHeure(d.heure);
-  const quand = date && heure ? ` pour le ${date} à ${heure}` : date ? ` pour le ${date}` : "";
+  const quand = date && heure ? ` le ${date} à ${heure}` : date ? ` le ${date}` : "";
+  const resto = RESTAURANT.nom;
+  const tel = RESTAURANT.telephone ? ` ${RESTAURANT.telephone}` : "";
 
-  return (
-    `Bonjour${nom ? " " + nom : ""}, nous sommes désolés, nous ne pouvons pas accueillir votre demande de réservation${quand}. ` +
-    `N'hésitez pas à nous recontacter pour une autre date.` +
-    signature()
-  );
+  return plusLongQuiTient([
+    `${bonjour} désolés, nous ne pouvons pas vous accueillir${quand}. Rappelez-nous pour une autre date. - ${resto}${tel}`,
+    `${bonjour} désolés, nous ne pouvons pas vous accueillir${quand}. - ${resto}${tel}`,
+    `${bonjour} désolés, nous ne pouvons pas vous accueillir${quand}. - ${resto}`,
+    `Désolés, nous ne pouvons pas vous accueillir${quand}. - ${resto}`,
+  ]);
 }
