@@ -1,22 +1,31 @@
 import { NextResponse } from "next/server";
+import { COOKIE_SESSION, OPTIONS_COOKIE, jetonValide } from "./app/lib/session";
 
-export function proxy(request) {
-  const auth = request.headers.get("authorization");
+export async function proxy(request) {
+  const { pathname, search } = request.nextUrl;
+  const jeton = request.cookies.get(COOKIE_SESSION)?.value;
+  const connecte = await jetonValide(jeton);
 
-  if (auth?.startsWith("Basic ")) {
-    const [user, pass] = atob(auth.slice(6)).split(":");
-    if (user === process.env.APP_USER && pass === process.env.APP_PASSWORD) {
-      return NextResponse.next();
-    }
+  // Page de connexion : accessible sans session
+  if (pathname === "/connexion") {
+    if (connecte) return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.next();
   }
 
-  return new NextResponse("Accès réservé", {
-    status: 401,
-    headers: { "WWW-Authenticate": 'Basic realm="Repondeur IA"' },
-  });
+  // Pas connecté : direction la page de connexion
+  if (!connecte) {
+    const url = new URL("/connexion", request.url);
+    url.searchParams.set("suite", pathname + search);
+    return NextResponse.redirect(url);
+  }
+
+  // Connecté : on prolonge la session à chaque visite
+  const res = NextResponse.next();
+  res.cookies.set(COOKIE_SESSION, jeton, OPTIONS_COOKIE);
+  return res;
 }
 
-// Tout est protégé, sauf la route appelée par Twilio
+// Tout est protégé, sauf les routes appelées par Twilio
 export const config = {
   matcher: ["/((?!api/twilio|_next/static|_next/image|favicon.ico).*)"],
 };

@@ -1,7 +1,7 @@
 import { formatDateLongue, formatHeure } from "./format";
 
 // À adapter : nom affiché en fin de SMS, et téléphone du restaurant (optionnel)
-export const RESTAURANT = { nom: "Le Test", telephone: "" };
+export const RESTAURANT = { nom: "Le bonnet blanc", telephone: "0670165625" };
 
 const MOTS_PLACEMENT = [
   "terrasse", "table", "fenêtre", "fenetre", "salle", "intérieur",

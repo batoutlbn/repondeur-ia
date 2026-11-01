@@ -138,7 +138,7 @@ export async function POST(request) {
 
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say language="fr-FR" voice="Polly.Lea">Merci, votre message a bien été enregistré. À bientôt.</Say>
+  <Say language="fr-FR" voice="Polly.Lea-Neural">Merci, votre message a bien été enregistré. À bientôt.</Say>
   <Hangup/>
 </Response>`;
 

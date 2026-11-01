@@ -14,6 +14,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { supabase } from "./lib/supabase";
+import BarreBas from "./components/BarreBas";
 
 export const dynamic = "force-dynamic";
 
@@ -112,7 +113,9 @@ export default async function Page({ searchParams }) {
           <h1 className="font-[family-name:var(--font-titre)] text-4xl font-bold text-[#163728]">
             Réservations
           </h1>
-          <Settings className="text-stone-500" size={24} />
+                    <Link href="/parametres" aria-label="Paramètres" className="p-2 -mr-2 text-stone-500">
+            <Settings size={24} />
+          </Link>
         </div>
 
         {/* Onglets */}
@@ -237,23 +240,7 @@ export default async function Page({ searchParams }) {
         ))}
       </main>
 
-      {/* Barre du bas */}
-      <nav className="fixed bottom-0 inset-x-0 bg-white border-t border-stone-200">
-        <div className="mx-auto max-w-xl grid grid-cols-3 py-2">
-          <Link href="/" className="flex flex-col items-center gap-1 text-xs font-medium" style={{ color: VERT }}>
-            <CalendarCheck size={22} />
-            Réservations
-          </Link>
-          <span className="flex flex-col items-center gap-1 text-xs text-stone-400">
-            <ChartColumn size={22} />
-            Statistiques
-          </span>
-          <span className="flex flex-col items-center gap-1 text-xs text-stone-400">
-            <Settings size={22} />
-            Paramètres
-          </span>
-        </div>
-      </nav>
+     <BarreBas actif="reservations" />
     </div>
   );
 }
