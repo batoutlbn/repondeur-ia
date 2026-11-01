@@ -7,8 +7,12 @@ const texte = Inter({ subsets: ["latin"], variable: "--font-texte" });
 export const metadata = {
   title: "Réservations",
   description: "Répondeur IA du restaurant",
+  appleWebApp: {
+    capable: true,
+    title: "Réservations",
+    statusBarStyle: "default",
+  },
 };
-
 export default function RootLayout({ children }) {
   return (
     <html lang="fr" className={`${titre.variable} ${texte.variable}`}>
