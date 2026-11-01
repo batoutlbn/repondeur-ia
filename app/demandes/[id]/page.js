@@ -100,7 +100,7 @@ export default async function FicheDemande({ params }) {
   return (
     <div className="min-h-screen pb-32">
             {/* Barre du haut */}
-      <header className="sticky top-0 z-10 bg-[#faf9f6]/90 backdrop-blur">
+      <header>
         <div className="mx-auto max-w-xl px-4 h-14 flex items-center">
           <Link href="/" className="p-2 -ml-2 text-stone-700" aria-label="Retour">
             <ChevronLeft size={26} />
@@ -244,7 +244,7 @@ export default async function FicheDemande({ params }) {
 
       {/* Boutons du bas */}
       {d.statut === "a_confirmer" && (
-        <div className="fixed bottom-0 inset-x-0 bg-[#faf9f6] border-t border-stone-200">
+                <div className="fixed bottom-0 inset-x-0 z-20 bg-[#faf9f6] border-t border-stone-200">
           <div className="mx-auto max-w-xl px-4 py-3 grid grid-cols-[1fr_1fr_2fr] gap-2">
             <Link
               href={`/demandes/${d.id}/modifier`}

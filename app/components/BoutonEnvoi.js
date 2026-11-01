@@ -2,14 +2,19 @@
 
 import { useFormStatus } from "react-dom";
 
-export default function BoutonEnvoi({ children, enCours = "Sauvegarde…" }) {
+const COULEURS = {
+  vert: "bg-[#1f4a3a] text-white",
+  rouge: "bg-red-700 text-white",
+};
+
+export default function BoutonEnvoi({ children, enCours = "Sauvegarde…", disabled = false, couleur = "vert" }) {
   const { pending } = useFormStatus();
 
   return (
     <button
       type="submit"
-      disabled={pending}
-      className="rounded-xl py-3.5 font-medium text-white bg-[#1f4a3a] disabled:opacity-60 disabled:cursor-wait"
+      disabled={pending || disabled}
+      className={`w-full rounded-xl px-3 py-3.5 font-medium ${COULEURS[couleur]} disabled:opacity-60 disabled:cursor-not-allowed`}
     >
       {pending ? enCours : children}
     </button>
