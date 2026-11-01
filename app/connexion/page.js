@@ -6,22 +6,11 @@ import { COOKIE_SESSION, OPTIONS_COOKIE, creerJeton } from "../lib/session";
 async function connecter(formData) {
   "use server";
 
-    const identifiant = String(formData.get("identifiant") ?? "").trim().toLowerCase();
   const motdepasse = String(formData.get("motdepasse") ?? "");
   let suite = String(formData.get("suite") ?? "/");
   if (!suite.startsWith("/") || suite.startsWith("//")) suite = "/";
 
-    const userAttendu = String(process.env.APP_USER ?? "").trim().toLowerCase();
-      console.log("DEBUG connexion :", {
-    idTape: identifiant.length,
-    idAttendu: userAttendu.length,
-    idOk: identifiant === userAttendu,
-    mdpTape: motdepasse.length,
-    mdpAttendu: (process.env.APP_PASSWORD ?? "").length,
-    mdpOk: motdepasse === process.env.APP_PASSWORD,
-    secretPresent: !!process.env.SESSION_SECRET,
-  });
-  if (identifiant !== userAttendu || motdepasse !== process.env.APP_PASSWORD) {
+  if (motdepasse !== process.env.APP_PASSWORD) {
     await new Promise((r) => setTimeout(r, 1000)); // ralentit les essais au hasard
     redirect(`/connexion?erreur=1&suite=${encodeURIComponent(suite)}`);
   }
@@ -42,23 +31,10 @@ export default async function Connexion({ searchParams }) {
         <h1 className="font-[family-name:var(--font-titre)] text-4xl font-bold text-[#163728] text-center mb-2">
           Réservations
         </h1>
-        <p className="text-center text-stone-500 mb-8">Connecte-toi pour accéder aux demandes</p>
+        <p className="text-center text-stone-500 mb-8">Entre ton mot de passe pour accéder aux demandes</p>
 
         <form action={connecter} className="bg-white rounded-2xl border border-stone-200 p-6 space-y-4">
           <input type="hidden" name="suite" value={suite} />
-
-          <label className="block">
-            <span className="block text-sm font-medium text-stone-600 mb-1">Identifiant</span>
-                       <input
-              name="identifiant"
-              autoComplete="username"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-              required
-              className={input}
-            />
-          </label>
 
           <label className="block">
             <span className="block text-sm font-medium text-stone-600 mb-1">Mot de passe</span>
@@ -66,14 +42,13 @@ export default async function Connexion({ searchParams }) {
               type="password"
               name="motdepasse"
               autoComplete="current-password"
+              autoFocus
               required
               className={input}
             />
           </label>
 
-          {erreur && (
-            <p className="text-red-700 text-sm">Identifiant ou mot de passe incorrect.</p>
-          )}
+          {erreur && <p className="text-red-700 text-sm">Mot de passe incorrect.</p>}
 
           <BoutonEnvoi enCours="Connexion…">Se connecter</BoutonEnvoi>
         </form>
