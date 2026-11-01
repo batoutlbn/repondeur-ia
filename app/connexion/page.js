@@ -6,12 +6,13 @@ import { COOKIE_SESSION, OPTIONS_COOKIE, creerJeton } from "../lib/session";
 async function connecter(formData) {
   "use server";
 
-  const identifiant = String(formData.get("identifiant") ?? "").trim();
+    const identifiant = String(formData.get("identifiant") ?? "").trim().toLowerCase();
   const motdepasse = String(formData.get("motdepasse") ?? "");
   let suite = String(formData.get("suite") ?? "/");
   if (!suite.startsWith("/") || suite.startsWith("//")) suite = "/";
 
-  if (identifiant !== process.env.APP_USER || motdepasse !== process.env.APP_PASSWORD) {
+    const userAttendu = String(process.env.APP_USER ?? "").trim().toLowerCase();
+  if (identifiant !== userAttendu || motdepasse !== process.env.APP_PASSWORD) {
     await new Promise((r) => setTimeout(r, 1000)); // ralentit les essais au hasard
     redirect(`/connexion?erreur=1&suite=${encodeURIComponent(suite)}`);
   }
@@ -39,7 +40,15 @@ export default async function Connexion({ searchParams }) {
 
           <label className="block">
             <span className="block text-sm font-medium text-stone-600 mb-1">Identifiant</span>
-            <input name="identifiant" autoComplete="username" required className={input} />
+                       <input
+              name="identifiant"
+              autoComplete="username"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              required
+              className={input}
+            />
           </label>
 
           <label className="block">
