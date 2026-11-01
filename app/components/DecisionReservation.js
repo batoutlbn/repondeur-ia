@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, X, Users, CalendarDays, Umbrella, MessageCircle, Info, TriangleAlert, RotateCcw } from "lucide-react";
+import { Check, X, Users, CalendarDays, Umbrella, MessageCircle, TriangleAlert, RotateCcw } from "lucide-react";
 import BoutonEnvoi from "./BoutonEnvoi";
 import { confirmerReservation, refuserReservation } from "../demandes/actions";
 
@@ -32,13 +32,15 @@ const MODES = {
   },
 };
 
-export default function DecisionReservation({ mode, id, recap, smsDefaut, numero, bloque }) {
+export default function DecisionReservation({ mode, id, recap, smsDefaut, numeros = [], bloque }) {
   const m = MODES[mode];
   const [ouvert, setOuvert] = useState(false);
   const [texte, setTexte] = useState(smsDefaut);
   const [envoyerSms, setEnvoyerSms] = useState(true);
+  const [numero, setNumero] = useState(numeros[0]?.numero ?? "");
 
-  const smsActif = !!numero && envoyerSms && texte.trim().length > 0;
+  const aUnNumero = numeros.length > 0;
+  const smsActif = aUnNumero && envoyerSms && texte.trim().length > 0;
 
   return (
     <>
@@ -87,13 +89,13 @@ export default function DecisionReservation({ mode, id, recap, smsDefaut, numero
                   )}
                 </div>
 
-                {/* SMS modifiable */}
-                <div className="border border-stone-200 rounded-2xl p-4 mb-3">
+                {/* SMS */}
+                <div className="border border-stone-200 rounded-2xl p-4 mb-5">
                   <div className="flex items-center justify-between mb-3">
                     <p className="flex items-center gap-2 font-semibold">
                       <MessageCircle size={18} /> SMS au client
                     </p>
-                    {numero && (
+                    {aUnNumero && (
                       <label className="flex items-center gap-2 text-sm text-stone-600">
                         <input
                           type="checkbox"
@@ -106,12 +108,36 @@ export default function DecisionReservation({ mode, id, recap, smsDefaut, numero
                     )}
                   </div>
 
-                  {!numero ? (
+                  {!aUnNumero ? (
                     <p className="text-orange-800">
                       Aucun numéro mobile utilisable : il faudra contacter le client autrement.
                     </p>
                   ) : envoyerSms ? (
                     <>
+                      {/* Choix du numéro */}
+                      <p className="text-sm text-stone-500 mb-2">Envoyer au :</p>
+                      <div className="space-y-2 mb-3">
+                        {numeros.map((n) => (
+                          <label
+                            key={n.numero}
+                            className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 cursor-pointer ${
+                              numero === n.numero ? "border-[#1f4a3a] bg-[#eef3ef]" : "border-stone-200"
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="choix_numero"
+                              checked={numero === n.numero}
+                              onChange={() => setNumero(n.numero)}
+                              className="accent-[#1f4a3a]"
+                            />
+                            <span className="font-medium">{n.affichage}</span>
+                            <span className="text-sm text-stone-500">{n.source}</span>
+                          </label>
+                        ))}
+                      </div>
+
+                      {/* Texte modifiable */}
                       <textarea
                         value={texte}
                         onChange={(e) => setTexte(e.target.value)}
@@ -136,16 +162,10 @@ export default function DecisionReservation({ mode, id, recap, smsDefaut, numero
                     <p className="text-stone-500">Aucun SMS ne sera envoyé.</p>
                   )}
                 </div>
-
-                {smsActif && (
-                  <p className="flex items-center gap-2 text-sm text-stone-500 mb-5">
-                    <Info size={16} /> Envoyé au {numero} après validation.
-                  </p>
-                )}
               </>
             )}
 
-            <div className="grid grid-cols-[1fr_2fr] gap-3 mt-2">
+            <div className="grid grid-cols-[1fr_2fr] gap-3">
               <button
                 type="button"
                 onClick={() => setOuvert(false)}
@@ -153,9 +173,10 @@ export default function DecisionReservation({ mode, id, recap, smsDefaut, numero
               >
                 Annuler
               </button>
-              <form action={m.action}>
+              <form action={m.action} className="w-full">
                 <input type="hidden" name="id" value={id} />
                 <input type="hidden" name="sms_texte" value={smsActif ? texte : ""} />
+                <input type="hidden" name="numero" value={numero} />
                 <BoutonEnvoi enCours={m.enCours} disabled={!!bloque} couleur={m.couleur}>
                   {smsActif ? m.avecSms : m.sansSms}
                 </BoutonEnvoi>

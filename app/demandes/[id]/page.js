@@ -18,8 +18,9 @@ import {
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { formatDateLongue, formatHeure, formatTel } from "../../lib/format";
-import { texteSMS, texteRefus, numeroSMS, preferencesPlacement } from "../../lib/sms";
+import { texteSMS, texteRefus, numerosSMS, preferencesPlacement } from "../../lib/sms";
 import DecisionReservation from "../../components/DecisionReservation";
+import BoutonSupprimer from "../../components/BoutonSupprimer";
 
 export const dynamic = "force-dynamic";
 
@@ -82,9 +83,8 @@ export default async function FicheDemande({ params }) {
   const aVerifier = [...d.infos_manquantes.map((i) => `Manquant : ${i}`), ...d.ambiguites];
 
   // Données pour les fenêtres de décision
-  const numero = numeroSMS(d);
-  const numeroAffiche = numero ? formatTel(numero) : null;
-  const placement = preferencesPlacement(d);
+    const numeros = numerosSMS(d).map((n) => ({ ...n, affichage: formatTel(n.numero) }));
+    const placement = preferencesPlacement(d);
   const bloque =
     !d.date_reservation || !d.heure || d.nb_personnes == null
       ? "Complète la date, l'heure et le nombre de personnes (bouton Modifier) avant de valider."
@@ -99,15 +99,16 @@ export default async function FicheDemande({ params }) {
 
   return (
     <div className="min-h-screen pb-32">
-      {/* Barre du haut */}
+            {/* Barre du haut */}
       <header className="sticky top-0 z-10 bg-[#faf9f6]/90 backdrop-blur">
         <div className="mx-auto max-w-xl px-4 h-14 flex items-center">
           <Link href="/" className="p-2 -ml-2 text-stone-700" aria-label="Retour">
             <ChevronLeft size={26} />
           </Link>
-          <h1 className="flex-1 text-center font-medium text-stone-800 -ml-8 pointer-events-none">
+          <h1 className="flex-1 text-center font-medium text-stone-800 pointer-events-none">
             Demande de réservation
           </h1>
+          <BoutonSupprimer id={d.id} />
         </div>
       </header>
 
@@ -256,7 +257,7 @@ export default async function FicheDemande({ params }) {
               id={d.id}
               recap={recap}
               smsDefaut={texteRefus(d)}
-              numero={numeroAffiche}
+              numeros={numeros}
               bloque={null}
             />
             <DecisionReservation
@@ -264,7 +265,7 @@ export default async function FicheDemande({ params }) {
               id={d.id}
               recap={recap}
               smsDefaut={bloque ? "" : texteSMS(d)}
-              numero={numeroAffiche}
+              numeros={numeros}
               bloque={bloque}
             />
           </div>

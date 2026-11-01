@@ -1,7 +1,7 @@
 import { formatDateLongue, formatHeure } from "./format";
 
 // À adapter : nom affiché en fin de SMS, et téléphone du restaurant (optionnel)
-export const RESTAURANT = { nom: "Le bonnet blanc", telephone: "0670165625" };
+export const RESTAURANT = { nom: "Le Bonnet Blanc", telephone: "" };
 
 const MOTS_PLACEMENT = [
   "terrasse", "table", "fenêtre", "fenetre", "salle", "intérieur",
@@ -18,6 +18,13 @@ function signature() {
   return s;
 }
 
+function versMobile(t) {
+  if (!t) return null;
+  let n = t.replace(/[\s.-]/g, "");
+  if (n.startsWith("+33")) n = "0" + n.slice(3);
+  return /^0[67]\d{8}$/.test(n) ? "+33" + n.slice(1) : null;
+}
+
 // Préférences de placement, seulement si le restaurateur les a confirmées
 export function preferencesPlacement(d) {
   if (d.table_pref_statut !== "acceptee") return [];
@@ -26,15 +33,14 @@ export function preferencesPlacement(d) {
   );
 }
 
-// Numéro mobile utilisable : d'abord celui de l'appel, sinon celui dicté
-export function numeroSMS(d) {
-  for (const t of [d.telephone_dicte, d.telephone_appelant]) {
-    if (!t) continue;
-    let n = t.replace(/[\s.-]/g, "");
-    if (n.startsWith("+33")) n = "0" + n.slice(3);
-    if (/^0[67]\d{8}$/.test(n)) return "+33" + n.slice(1);
-  }
-  return null;
+// Tous les mobiles utilisables, numéro de l'appel en premier
+export function numerosSMS(d) {
+  const liste = [];
+  const appel = versMobile(d.telephone_appelant);
+  const dicte = versMobile(d.telephone_dicte);
+  if (appel) liste.push({ numero: appel, source: "numéro de l'appel" });
+  if (dicte && dicte !== appel) liste.push({ numero: dicte, source: "numéro dicté" });
+  return liste;
 }
 
 export function texteSMS(d) {
