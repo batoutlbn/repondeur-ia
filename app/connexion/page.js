@@ -12,6 +12,15 @@ async function connecter(formData) {
   if (!suite.startsWith("/") || suite.startsWith("//")) suite = "/";
 
     const userAttendu = String(process.env.APP_USER ?? "").trim().toLowerCase();
+      console.log("DEBUG connexion :", {
+    idTape: identifiant.length,
+    idAttendu: userAttendu.length,
+    idOk: identifiant === userAttendu,
+    mdpTape: motdepasse.length,
+    mdpAttendu: (process.env.APP_PASSWORD ?? "").length,
+    mdpOk: motdepasse === process.env.APP_PASSWORD,
+    secretPresent: !!process.env.SESSION_SECRET,
+  });
   if (identifiant !== userAttendu || motdepasse !== process.env.APP_PASSWORD) {
     await new Promise((r) => setTimeout(r, 1000)); // ralentit les essais au hasard
     redirect(`/connexion?erreur=1&suite=${encodeURIComponent(suite)}`);
