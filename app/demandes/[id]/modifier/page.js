@@ -33,7 +33,7 @@ async function sauvegarder(formData) {
     .filter(Boolean);
   const pref = texte("table_pref_statut");
   const table_pref_statut = PREF_STATUTS.includes(pref) ? pref : "non_traitee";
-
+  const remarques = texte("remarques");
   // Recalcule ce qui manque après correction
   const infos_manquantes = [];
   if (!nom) infos_manquantes.push("nom");
@@ -52,6 +52,7 @@ async function sauvegarder(formData) {
       telephone_dicte,
       preferences,
       table_pref_statut,
+      remarques,
       infos_manquantes,
       ambiguites: [], // vérifiées par le restaurateur
     })
@@ -135,6 +136,14 @@ export default async function ModifierDemande({ params }) {
               <option value="acceptee">Oui, confirmée</option>
               <option value="impossible">Non, impossible</option>
             </select>
+          </Champ>
+          <Champ label="Remarques">
+            <textarea
+              name="remarques"
+              rows={3}
+              defaultValue={d.remarques ?? ""}
+              className={`${input} resize-none`}
+            />
           </Champ>
           <p className="text-sm text-stone-500">
             La terrasse ou la table ne seront mentionnées dans le SMS que si tu choisis « Oui, confirmée ».

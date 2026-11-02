@@ -35,6 +35,7 @@ const SCHEMA = {
     "nb_enfants",
     "telephone_dicte",
     "preferences",
+    "remarques",
     "infos_manquantes",
     "ambiguites",
   ],
@@ -47,6 +48,7 @@ const SCHEMA = {
     nb_enfants: { type: ["integer", "null"] },
     telephone_dicte: texteOuNull,
     preferences: { type: "array", items: { type: "string" } },
+    remarques: texteOuNull,
     infos_manquantes: { type: "array", items: { type: "string" } },
     ambiguites: { type: "array", items: { type: "string" } },
   },
@@ -59,17 +61,17 @@ Date et heure de l'appel : ${texte} (date ISO : ${iso}), fuseau Europe/Paris.
 
 Règles :
 - N'invente jamais rien. Si une information n'est pas dite clairement, mets null.
-- nom : le nom donné par l'appelant.
+- nom : le nom (et le prénom s'il est donné) de la personne qui réserve, sans civilité ("Monsieur", "Madame"). Si le client épelle son nom lettre par lettre, l'orthographe épelée est prioritaire sur le nom entendu. Majuscule au début de chaque mot.
 - date_expression : les mots exacts utilisés pour la date (ex. "samedi prochain", "le 24").
 - date_reservation : la date calculée au format AAAA-MM-JJ à partir de la date de l'appel. Si plusieurs dates sont possibles (ex. "samedi prochain" dit un vendredi), choisis la plus probable et explique le doute dans ambiguites.
 - heure : format HH:MM sur 24 h ("20 h" → "20:00", "8 heures du soir" → "20:00"). Si on ne sait pas si c'est le midi ou le soir, signale-le dans ambiguites.
-- nb_personnes : un nombre entier.
-- nb_personnes est le total, enfants compris ("2 adultes et 2 enfants" → 4).
+- nb_personnes : le total, enfants compris ("2 adultes et 2 enfants" → 4).
 - nb_enfants : le nombre d'enfants parmi eux s'il est mentionné, sinon null. Si le client parle d'enfants sans donner leur nombre, mets null et signale-le dans ambiguites.
-- telephone_dicte : le numéro dicté dans le message, en 10 chiffres sans espaces, sinon null. Si des chiffres sont incertains, signale-le dans ambiguites.
-- preferences : les demandes particulières, formulées courtement (ex. "Terrasse", "Anniversaire", "Poussette", "Loin de l'entrée").
+- telephone_dicte : le numéro dicté dans le message, uniquement en chiffres. Les numéros français sont souvent dictés par paires ("zéro six, douze, trente-quatre, cinquante-six, soixante-dix-huit" → "0612345678") ou avec l'indicatif ("plus trente-trois six…" → "06…"). Assemble tous les chiffres dans l'ordre, sans en ajouter ni en retirer. Si le client se corrige, garde la version corrigée. Si aucun numéro n'est dicté, mets null.
+- preferences : uniquement ce qui concerne la réservation : placement (terrasse, fenêtre, table précise…), occasion (anniversaire…), besoins (poussette, chaise haute, accès fauteuil, allergie…). Formulation courte.
+- remarques : toute autre information utile au restaurateur qui n'entre dans aucun champ (ex. "Annule s'il pleut", "Arrivera peut-être en retard", "Souhaite être rappelé"). Une phrase courte, sinon null.
 - infos_manquantes : parmi "nom", "date", "heure", "nombre de personnes", celles qui ne sont pas données.
-- ambiguites : chaque doute en une phrase courte.`;
+- ambiguites : uniquement les doutes sur la réservation elle-même (nom, date, heure, nombre de personnes, enfants, téléphone, placement), chacun en une phrase courte. N'y mets ni les phrases hors sujet, ni l'humour, ni les mots mal compris sans rapport avec la réservation. Ne répète pas ce qui est déjà dans infos_manquantes.`;
 }
 
 // Vérifie que le jour cité ("samedi") correspond bien à la date calculée
@@ -87,6 +89,24 @@ function verifierJour(infos) {
     infos.ambiguites.push(
       `Le jour cité (${jourCite}) ne correspond pas à la date calculée (${infos.date_reservation}, un ${jourCalcule}).`
     );
+  }
+}
+
+// Vérifie que le numéro dicté fait bien 10 chiffres
+function verifierTelephone(infos) {
+  if (!infos.telephone_dicte) return;
+  const brut = infos.telephone_dicte;
+  let n = brut.replace(/\D/g, "");
+  if (n.startsWith("0033")) n = "0" + n.slice(4);
+  else if (n.startsWith("33") && n.length === 11) n = "0" + n.slice(2);
+
+  if (/^0\d{9}$/.test(n)) {
+    infos.telephone_dicte = n;
+  } else {
+    infos.ambiguites.push(
+      `Numéro dicté incomplet ou incorrect : « ${brut} » (${n.length} chiffres au lieu de 10).`
+    );
+    infos.telephone_dicte = null;
   }
 }
 
@@ -118,5 +138,6 @@ export async function extraireInfos(transcription, dateAppel) {
   const json = await res.json();
   const infos = JSON.parse(json.choices[0].message.content);
   verifierJour(infos);
+  verifierTelephone(infos);
   return infos;
 }

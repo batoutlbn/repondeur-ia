@@ -31,7 +31,7 @@ async function transcrire(audio) {
   form.append("language", "fr");
   form.append(
     "prompt",
-    "Message laissé sur le répondeur d'un restaurant pour une demande de réservation."
+        "Message laissé sur le répondeur d'un restaurant pour une demande de réservation. Écris les numéros de téléphone, les dates, les heures et les nombres en chiffres."
   );
 
   const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
@@ -123,6 +123,7 @@ export async function POST(request) {
             nb_personnes: infos.nb_personnes,
             nb_enfants: infos.nb_enfants,
             telephone_dicte: infos.telephone_dicte,
+            remarques: infos.remarques,
             preferences: infos.preferences,
             infos_manquantes: infos.infos_manquantes,
             ambiguites: infos.ambiguites,

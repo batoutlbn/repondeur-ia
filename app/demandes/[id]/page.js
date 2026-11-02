@@ -16,6 +16,7 @@ import {
   Star,
   MessageCircle,
   Copy,
+  StickyNote,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { formatDateLongue, formatHeure, formatTel } from "../../lib/format";
@@ -259,7 +260,16 @@ export default async function FicheDemande({ params }) {
             )}
           </Carte>
         )}
-
+        {/* Remarques */}
+        {d.remarques && (
+          <Carte>
+            <p className="flex items-center gap-3 font-semibold mb-2">
+              <StickyNote size={20} className="text-stone-500" /> Remarques
+            </p>
+            <p className="text-stone-700 leading-relaxed">{d.remarques}</p>
+          </Carte>
+        )}
+        
         {/* Message vocal */}
         <Carte>
           <p className="flex items-center gap-3 font-semibold mb-3">
