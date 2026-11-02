@@ -102,6 +102,7 @@ export default async function FicheDemande({ params }) {
   const smsStatut = SMS_STATUTS[d.sms_statut] ?? SMS_STATUTS.non_envoye;
     // Rafraîchir seulement pendant l'analyse ou l'envoi du SMS
   const enCours = d.statut === "a_traiter" || ["en_attente", "envoye"].includes(d.sms_statut);
+    const peutRenvoyer = decidee && ["echec", "non_envoye"].includes(d.sms_statut);
   // Autres demandes du même numéro pour la même date
   let doublons = [];
   if (d.date_reservation && STATUTS_DOUBLON.includes(d.statut)) {
@@ -188,6 +189,18 @@ export default async function FicheDemande({ params }) {
               <p className="mt-3 bg-[#f1f0ec] rounded-xl p-3 text-stone-700 leading-relaxed">{d.sms_texte}</p>
             )}
             {d.sms_erreur && <p className="text-sm text-red-700 mt-2">{d.sms_erreur}</p>}
+                      {peutRenvoyer && (
+              <div className="mt-4">
+                <DecisionReservation
+                  mode="renvoyer"
+                  id={d.id}
+                  recap={recap}
+                  smsDefaut={d.sms_texte || (d.statut === "confirmee" ? texteSMS(d) : texteRefus(d))}
+                  numeros={numeros}
+                  bloque={null}
+                />
+              </div>
+            )}
           </Carte>
         )}
 
@@ -269,7 +282,7 @@ export default async function FicheDemande({ params }) {
             <p className="text-stone-700 leading-relaxed">{d.remarques}</p>
           </Carte>
         )}
-        
+
         {/* Message vocal */}
         <Carte>
           <p className="flex items-center gap-3 font-semibold mb-3">

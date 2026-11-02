@@ -6,9 +6,38 @@ import { numerosSMS } from "../lib/sms";
 import { envoyerSMS } from "../lib/twilio";
 import { nettoyerSMS, couperSMS } from "../lib/gsm";
 
+const SMS_RENVOYABLES = ["echec", "non_envoye"];
+
+function lireTexte(formData) {
+  return couperSMS(nettoyerSMS(String(formData.get("sms_texte") ?? "").trim()));
+}
+
+// N'accepte que les numéros de la fiche, jamais un numéro inventé
+function choisirNumero(d, numeroChoisi) {
+  const autorises = numerosSMS(d).map((n) => n.numero);
+  return autorises.includes(numeroChoisi) ? numeroChoisi : autorises[0] ?? null;
+}
+
+// Envoie le SMS et enregistre le résultat
+async function envoyerEtEnregistrer(id, numero, texte) {
+  try {
+    const sid = await envoyerSMS(numero, texte);
+    await supabase
+      .from("demandes")
+      .update({ sms_statut: "envoye", sms_sid: sid, sms_erreur: null, sms_texte: texte })
+      .eq("id", id);
+  } catch (e) {
+    console.error("Erreur SMS :", e);
+    await supabase
+      .from("demandes")
+      .update({ sms_statut: "echec", sms_erreur: String(e.message).slice(0, 300), sms_texte: texte })
+      .eq("id", id);
+  }
+}
+
 async function decider(formData, nouveauStatut, exigerComplet) {
   const id = String(formData.get("id"));
-    const texte = couperSMS(nettoyerSMS(String(formData.get("sms_texte") ?? "").trim()));
+  const texte = lireTexte(formData);
   const numeroChoisi = String(formData.get("numero") ?? "");
 
   // Ne change le statut que si la demande est encore "à confirmer".
@@ -31,9 +60,7 @@ async function decider(formData, nouveauStatut, exigerComplet) {
 
   // d n'existe que pour la toute première décision : le SMS ne peut partir qu'une fois
   if (d) {
-    // On n'accepte que les numéros de la fiche, jamais un numéro inventé
-    const autorises = numerosSMS(d).map((n) => n.numero);
-    const numero = autorises.includes(numeroChoisi) ? numeroChoisi : autorises[0] ?? null;
+    const numero = choisirNumero(d, numeroChoisi);
 
     if (!texte) {
       await supabase.from("demandes").update({ sms_statut: "non_envoye" }).eq("id", id);
@@ -47,20 +74,7 @@ async function decider(formData, nouveauStatut, exigerComplet) {
         .from("demandes")
         .update({ sms_statut: "en_attente", sms_texte: texte })
         .eq("id", id);
-
-      try {
-        const sid = await envoyerSMS(numero, texte);
-        await supabase
-          .from("demandes")
-          .update({ sms_statut: "envoye", sms_sid: sid, sms_erreur: null })
-          .eq("id", id);
-      } catch (e) {
-        console.error("Erreur SMS :", e);
-        await supabase
-          .from("demandes")
-          .update({ sms_statut: "echec", sms_erreur: String(e.message).slice(0, 300) })
-          .eq("id", id);
-      }
+      await envoyerEtEnregistrer(id, numero, texte);
     }
   }
 
@@ -73,6 +87,31 @@ export async function confirmerReservation(formData) {
 
 export async function refuserReservation(formData) {
   return decider(formData, "refusee", false);
+}
+
+export async function renvoyerSMS(formData) {
+  const id = String(formData.get("id"));
+  const texte = lireTexte(formData);
+  const numeroChoisi = String(formData.get("numero") ?? "");
+
+  const { data: fiche } = await supabase.from("demandes").select("*").eq("id", id).maybeSingle();
+  const numero = fiche ? choisirNumero(fiche, numeroChoisi) : null;
+
+  if (texte && numero) {
+    // Verrou : un seul renvoi possible, même en cas de double clic
+    const { data: d } = await supabase
+      .from("demandes")
+      .update({ sms_statut: "en_attente" })
+      .eq("id", id)
+      .in("statut", ["confirmee", "refusee"])
+      .in("sms_statut", SMS_RENVOYABLES)
+      .select("id")
+      .maybeSingle();
+
+    if (d) await envoyerEtEnregistrer(id, numero, texte);
+  }
+
+  redirect(`/demandes/${id}`);
 }
 
 export async function supprimerDemande(formData) {
@@ -93,31 +132,6 @@ export async function supprimerDemande(formData) {
   }
 
   const { error } = await supabase.from("demandes").delete().eq("id", id);
-  if (error) throw new Error(error.message);
-
-  redirect("/");
-}
-
-export async function supprimerTout(formData) {
-  // Double sécurité : la case doit avoir été cochée
-  if (formData.get("confirmation") !== "oui") return;
-
-  // 1. Audios : on vide le stockage par paquets de 100
-  for (let tour = 0; tour < 50; tour++) {
-    const { data: fichiers, error } = await supabase.storage
-      .from("enregistrements")
-      .list("", { limit: 100 });
-    if (error) throw new Error(error.message);
-    if (!fichiers?.length) break;
-
-    const { error: errSuppr } = await supabase.storage
-      .from("enregistrements")
-      .remove(fichiers.map((f) => f.name));
-    if (errSuppr) throw new Error(errSuppr.message);
-  }
-
-  // 2. Toutes les fiches
-  const { error } = await supabase.from("demandes").delete().not("id", "is", null);
   if (error) throw new Error(error.message);
 
   redirect("/");

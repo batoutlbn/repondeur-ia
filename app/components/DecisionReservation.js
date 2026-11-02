@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Check, X, Users, CalendarDays, Umbrella, MessageCircle, TriangleAlert, RotateCcw } from "lucide-react";
+import { Check, X, Users, CalendarDays, Umbrella, MessageCircle, TriangleAlert, RotateCcw, Send } from "lucide-react";
 import BoutonEnvoi from "./BoutonEnvoi";
-import { confirmerReservation, refuserReservation } from "../demandes/actions";
+import { confirmerReservation, refuserReservation, renvoyerSMS } from "../demandes/actions";
 import { nettoyerSMS, couperSMS, longueurSMS, LIMITE_SMS } from "../lib/gsm";
 
 const MODES = {
@@ -28,8 +28,20 @@ const MODES = {
     action: refuserReservation,
     avecSms: "Refuser et envoyer",
     sansSms: "Refuser",
-    enCours: "Envoi…",
+       enCours: "Envoi…",
     couleur: "rouge",
+  },
+  renvoyer: {
+    bouton: "Renvoyer le SMS",
+    boutonClasse: "bg-white border border-stone-300 text-stone-800",
+    titre: "Renvoyer le SMS ?",
+    Icone: Send,
+    rond: "bg-[#e3ebe5] text-[#1f4a3a]",
+    action: renvoyerSMS,
+    avecSms: "Envoyer le SMS",
+    sansSms: "Envoyer le SMS",
+    enCours: "Envoi…",
+    couleur: "vert",
   },
 };
 
@@ -96,7 +108,7 @@ export default function DecisionReservation({ mode, id, recap, smsDefaut, numero
                     <p className="flex items-center gap-2 font-semibold">
                       <MessageCircle size={18} /> SMS au client
                     </p>
-                    {aUnNumero && (
+                                        {aUnNumero && mode !== "renvoyer" && (
                       <label className="flex items-center gap-2 text-sm text-stone-600">
                         <input
                           type="checkbox"
@@ -179,7 +191,11 @@ export default function DecisionReservation({ mode, id, recap, smsDefaut, numero
                 <input type="hidden" name="id" value={id} />
                 <input type="hidden" name="sms_texte" value={smsActif ? texte : ""} />
                 <input type="hidden" name="numero" value={numero} />
-                <BoutonEnvoi enCours={m.enCours} disabled={!!bloque} couleur={m.couleur}>
+                                <BoutonEnvoi
+                  enCours={m.enCours}
+                  disabled={!!bloque || (mode === "renvoyer" && !smsActif)}
+                  couleur={m.couleur}
+                >
                   {smsActif ? m.avecSms : m.sansSms}
                 </BoutonEnvoi>
               </form>
