@@ -1,4 +1,5 @@
 import { supabase } from "../../../lib/supabase";
+import { signatureValide } from "../../../lib/twilioSignature";
 
 const STATUTS = {
   sent: "envoye",
@@ -9,6 +10,10 @@ const STATUTS = {
 
 export async function POST(request) {
   const data = Object.fromEntries(await request.formData());
+    if (!signatureValide(request, data)) {
+    console.warn("Requête refusée : signature Twilio invalide");
+    return new Response("Signature invalide", { status: 403 });
+  }
   const sms_statut = STATUTS[data.MessageStatus];
 
   if (sms_statut && data.MessageSid) {

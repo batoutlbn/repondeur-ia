@@ -2,6 +2,7 @@ import { after } from "next/server";
 import { supabase } from "../../../lib/supabase";
 import { extraireInfos } from "../../../lib/extraction";
 import { supprimerEnregistrement } from "../../../lib/twilio";
+import { signatureValide } from "../../../lib/twilioSignature";
 
 // Laisse jusqu'à 60 s au téléchargement + transcription + extraction
 export const maxDuration = 60;
@@ -48,6 +49,10 @@ async function transcrire(audio) {
 export async function POST(request) {
   const form = await request.formData();
   const data = Object.fromEntries(form);
+    if (!signatureValide(request, data)) {
+    console.warn("Requête refusée : signature Twilio invalide");
+    return new Response("Signature invalide", { status: 403 });
+  }
   const callSid = data.CallSid;
   const dateAppel = new Date();
 
