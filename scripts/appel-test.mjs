@@ -4,7 +4,7 @@ const NUMERO = "+33188732558"; // ton numéro Twilio
 
 const message =
   process.argv.slice(2).join(" ") ||
-  "Bonjour, c'est Julien Martin, je voudrais réserver pour 4 personnes samedi 5 décembre 12 heures, en terrasse si possible, avec un bébé avec un siège enfant . Mon numéro est le 06 12 34 56 78. Merci, au revoir.";
+  "Bonjour, c'est Julien Martin, je voudrais réserver pour 4 personnes samedi 5 décembre à  13 heures, en terrasse si possible, avec un bébé avec un siège enfant . Mon numéro est le 06 12 34 56 78. Merci, au revoir.";
 
 const echapper = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
