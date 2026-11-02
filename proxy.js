@@ -27,5 +27,5 @@ export async function proxy(request) {
 
 // Tout est protégé, sauf les routes appelées par Twilio
 export const config = {
-  matcher: ["/((?!api/twilio|_next/static|_next/image|favicon.ico|manifest.webmanifest).*)"],
+   matcher: ["/((?!api/twilio|api/cron|_next/static|_next/image|favicon.ico|manifest.webmanifest).*)"],
 };

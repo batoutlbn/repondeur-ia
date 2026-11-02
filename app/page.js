@@ -17,6 +17,7 @@ import {
 import { supabase } from "./lib/supabase";
 import BarreBas from "./components/BarreBas";
 import { clesDoublon, STATUTS_DOUBLON } from "./lib/doublons";
+import RafraichirAuto from "./components/RafraichirAuto";
 
 export const dynamic = "force-dynamic";
 
@@ -124,6 +125,7 @@ export default async function Page({ searchParams }) {
   return (
     <div className="min-h-screen pb-28">
       <main className="mx-auto max-w-xl px-5 pt-8">
+                <RafraichirAuto />
         {/* En-tête */}
         <div className="flex items-center justify-between mb-5">
           <h1 className="font-[family-name:var(--font-titre)] text-4xl font-bold text-[#163728]">

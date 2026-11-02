@@ -23,6 +23,7 @@ import { texteSMS, texteRefus, numerosSMS, preferencesPlacement } from "../../li
 import DecisionReservation from "../../components/DecisionReservation";
 import BoutonSupprimer from "../../components/BoutonSupprimer";
 import { clesDoublon, STATUTS_DOUBLON } from "../../lib/doublons";
+import RafraichirAuto from "../../components/RafraichirAuto";
 
 export const dynamic = "force-dynamic";
 
@@ -98,7 +99,8 @@ export default async function FicheDemande({ params }) {
   };
   const decidee = d.statut === "confirmee" || d.statut === "refusee";
   const smsStatut = SMS_STATUTS[d.sms_statut] ?? SMS_STATUTS.non_envoye;
-  
+    // Rafraîchir seulement pendant l'analyse ou l'envoi du SMS
+  const enCours = d.statut === "a_traiter" || ["en_attente", "envoye"].includes(d.sms_statut);
   // Autres demandes du même numéro pour la même date
   let doublons = [];
   if (d.date_reservation && STATUTS_DOUBLON.includes(d.statut)) {
@@ -125,7 +127,7 @@ export default async function FicheDemande({ params }) {
           <BoutonSupprimer id={d.id} />
         </div>
       </header>
-
+      {enCours && <RafraichirAuto intervalle={5000} />}
       <main className="mx-auto max-w-xl px-4 space-y-4">
         {/* Infos principales */}
         <Carte>
@@ -215,7 +217,7 @@ export default async function FicheDemande({ params }) {
             </ul>
           </section>
         )}
-        
+
         {/* Infos à vérifier */}
         {aVerifier.length > 0 && d.statut === "a_confirmer" && (
           <section className="bg-orange-50 border border-orange-200 rounded-2xl p-5">

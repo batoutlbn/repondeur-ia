@@ -1,9 +1,9 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { LogOut, User, Database } from "lucide-react";
+import { LogOut, User, ShieldCheck } from "lucide-react";
 import BarreBas from "../components/BarreBas";
-import SupprimerTout from "../components/SupprimerTout";
 import { COOKIE_SESSION } from "../lib/session";
+import { JOURS_CONSERVATION } from "../lib/purge";
 
 async function deconnecter() {
   "use server";
@@ -35,15 +35,19 @@ export default function Parametres() {
           <p className="text-sm text-stone-500 mt-3">La déconnexion ne concerne que cet appareil.</p>
         </section>
 
-        {/* Données */}
+        {/* Conservation des données */}
         <section className="bg-white rounded-2xl border border-stone-200 p-5">
-          <p className="flex items-center gap-3 font-semibold mb-1">
-            <Database size={20} className="text-stone-500" /> Données
+          <p className="flex items-center gap-3 font-semibold mb-2">
+            <ShieldCheck size={20} className="text-stone-500" /> Conservation des données
           </p>
-          <p className="text-stone-600 mb-4">
-            Supprime toutes les demandes, leurs transcriptions et les enregistrements audio.
+          <p className="text-stone-600 leading-relaxed">
+            Les demandes, leurs transcriptions et les enregistrements audio sont supprimés
+            automatiquement <strong>{JOURS_CONSERVATION} jours après la date de réservation</strong>,
+            ou {JOURS_CONSERVATION} jours après l'appel si aucune date n'a été comprise.
           </p>
-          <SupprimerTout />
+          <p className="text-sm text-stone-500 mt-3">
+            Une demande peut aussi être supprimée à tout moment depuis sa fiche.
+          </p>
         </section>
       </main>
 
