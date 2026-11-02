@@ -15,12 +15,14 @@ import {
   Baby,
   Star,
   MessageCircle,
+  Copy,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { formatDateLongue, formatHeure, formatTel } from "../../lib/format";
 import { texteSMS, texteRefus, numerosSMS, preferencesPlacement } from "../../lib/sms";
 import DecisionReservation from "../../components/DecisionReservation";
 import BoutonSupprimer from "../../components/BoutonSupprimer";
+import { clesDoublon, STATUTS_DOUBLON } from "../../lib/doublons";
 
 export const dynamic = "force-dynamic";
 
@@ -96,7 +98,19 @@ export default async function FicheDemande({ params }) {
   };
   const decidee = d.statut === "confirmee" || d.statut === "refusee";
   const smsStatut = SMS_STATUTS[d.sms_statut] ?? SMS_STATUTS.non_envoye;
-
+  
+  // Autres demandes du même numéro pour la même date
+  let doublons = [];
+  if (d.date_reservation && STATUTS_DOUBLON.includes(d.statut)) {
+    const { data: memeDate } = await supabase
+      .from("demandes")
+      .select("id, nom, heure, statut, telephone_appelant, telephone_dicte, date_reservation")
+      .eq("date_reservation", d.date_reservation)
+      .neq("id", d.id)
+      .in("statut", STATUTS_DOUBLON);
+    const mesCles = new Set(clesDoublon(d));
+    doublons = (memeDate ?? []).filter((x) => clesDoublon(x).some((k) => mesCles.has(k)));
+  }
   return (
     <div className="min-h-screen pb-32">
             {/* Barre du haut */}
@@ -174,6 +188,34 @@ export default async function FicheDemande({ params }) {
           </Carte>
         )}
 
+        {/* Doublons */}
+        {doublons.length > 0 && (
+          <section className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+            <p className="flex items-center gap-2 font-semibold text-amber-900 mb-2">
+              <Copy size={18} /> Doublon possible
+            </p>
+            <p className="text-amber-900 mb-3">
+              Ce numéro a laissé {doublons.length} autre{doublons.length > 1 ? "s" : ""} demande
+              {doublons.length > 1 ? "s" : ""} pour la même date :
+            </p>
+            <ul className="space-y-2">
+              {doublons.map((x) => (
+                <li key={x.id}>
+                  <Link
+                    href={`/demandes/${x.id}`}
+                    className="flex justify-between items-center bg-white rounded-xl border border-amber-200 px-3 py-2"
+                  >
+                    <span>
+                      {x.nom || "Nom non indiqué"} · {formatHeure(x.heure) || "heure ?"}
+                    </span>
+                    <span className="text-sm text-amber-800">{BADGES[x.statut]?.label}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        
         {/* Infos à vérifier */}
         {aVerifier.length > 0 && d.statut === "a_confirmer" && (
           <section className="bg-orange-50 border border-orange-200 rounded-2xl p-5">

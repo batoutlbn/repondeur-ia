@@ -12,9 +12,11 @@ import {
   Baby,
   Star,
   TriangleAlert,
+  Copy,
 } from "lucide-react";
 import { supabase } from "./lib/supabase";
 import BarreBas from "./components/BarreBas";
+import { clesDoublon, STATUTS_DOUBLON } from "./lib/doublons";
 
 export const dynamic = "force-dynamic";
 
@@ -96,6 +98,20 @@ export default async function Page({ searchParams }) {
     .select("id", { count: "exact", head: true })
     .in("statut", ONGLETS.a_confirmer.statuts);
 
+      // Détection des doublons : même numéro + même date
+  const { data: actives } = await supabase
+    .from("demandes")
+    .select("id, telephone_appelant, telephone_dicte, date_reservation")
+    .in("statut", STATUTS_DOUBLON)
+    .not("date_reservation", "is", null);
+
+  const parCle = new Map();
+  for (const a of actives ?? []) {
+    for (const k of clesDoublon(a)) parCle.set(k, (parCle.get(k) ?? 0) + 1);
+  }
+  const estDoublon = (d) =>
+    STATUTS_DOUBLON.includes(d.statut) && clesDoublon(d).some((k) => (parCle.get(k) ?? 0) > 1);
+  
   // Regroupement par jour de réception
   const groupes = [];
   for (const d of demandes ?? []) {
@@ -228,6 +244,12 @@ export default async function Page({ searchParams }) {
                           <p className="flex items-center gap-1.5 text-sm text-orange-700 mt-3">
                             <TriangleAlert size={14} />
                             Infos à vérifier
+                          </p>
+                        )}
+                         {estDoublon(d) && (
+                          <p className="flex items-center gap-1.5 text-sm text-amber-800 mt-2">
+                            <Copy size={14} />
+                            Doublon possible
                           </p>
                         )}
                       </div>
