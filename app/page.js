@@ -91,20 +91,23 @@ export default async function Page({ searchParams }) {
   const { data: demandes, error } = await supabase
     .from("demandes")
     .select("*")
-    .in("statut", ONGLETS[actif].statuts)
+        .in("statut", ONGLETS[actif].statuts)
+    .eq("anonymise", false)
     .order("created_at", { ascending: false });
 
   const { count } = await supabase
     .from("demandes")
     .select("id", { count: "exact", head: true })
-    .in("statut", ONGLETS.a_confirmer.statuts);
+        .in("statut", ONGLETS.a_confirmer.statuts)
+    .eq("anonymise", false);
 
       // Détection des doublons : même numéro + même date
   const { data: actives } = await supabase
     .from("demandes")
     .select("id, telephone_appelant, telephone_dicte, date_reservation")
     .in("statut", STATUTS_DOUBLON)
-    .not("date_reservation", "is", null);
+        .not("date_reservation", "is", null)
+    .eq("anonymise", false);
 
   const parCle = new Map();
   for (const a of actives ?? []) {

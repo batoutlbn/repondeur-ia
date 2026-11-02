@@ -69,7 +69,7 @@ export default async function FicheDemande({ params }) {
   const { id } = await params;
 
   const { data: d, error } = await supabase.from("demandes").select("*").eq("id", id).single();
-  if (error || !d) notFound();
+    if (error || !d || d.anonymise) notFound();
 
   // Lien temporaire (10 min) vers l'audio privé
   let audioUrl = null;

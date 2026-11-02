@@ -175,9 +175,8 @@ export default async function Statistiques({ searchParams }) {
           </ul>
         </Carte>
 
-        <p className="text-sm text-stone-500 text-center">
-          Les données sont supprimées 30 jours après la date de réservation : « Tout » couvre donc
-          environ les deux derniers mois.
+                <p className="text-sm text-stone-500 text-center">
+          Les statistiques sont conservées sans limite, sous forme anonyme.
         </p>
       </main>
 
