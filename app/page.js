@@ -5,12 +5,6 @@ import {
   CalendarDays,
   Users,
   Settings,
-  CalendarCheck,
-  ChartColumn,
-  Umbrella,
-  Cake,
-  Baby,
-  Star,
   TriangleAlert,
   Copy,
 } from "lucide-react";
@@ -18,10 +12,16 @@ import { supabase } from "./lib/supabase";
 import BarreBas from "./components/BarreBas";
 import { clesDoublon, STATUTS_DOUBLON } from "./lib/doublons";
 import RafraichirAuto from "./components/RafraichirAuto";
+import { formatDateCourte, formatHeure, heureParis, libelleJourRecu, iconePreference } from "./lib/format";
 
 export const dynamic = "force-dynamic";
 
 const VERT = "#1f4a3a";
+
+// Seules les colonnes affichées (pas la transcription, inutile ici)
+const COLONNES_LISTE =
+  "id, nom, statut, created_at, date_reservation, heure, nb_personnes, nb_enfants, preferences, infos_manquantes, ambiguites, telephone_appelant, telephone_dicte";
+const MAX_LISTE = 150;
 
 const ONGLETS = {
   a_confirmer: { label: "À confirmer", statuts: ["a_traiter", "a_confirmer", "erreur"] },
@@ -29,85 +29,34 @@ const ONGLETS = {
   refusee: { label: "Refusées", statuts: ["refusee"] },
 };
 
-// ---------- Formatage ----------
-
-const cleJour = (date) =>
-  new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris" }).format(date);
-
-function libelleJour(ts) {
-  const d = new Date(ts);
-  const aujourdhui = cleJour(new Date());
-  const hier = cleJour(new Date(Date.now() - 86400000));
-  const cle = cleJour(d);
-  if (cle === aujourdhui) return "Aujourd’hui";
-  if (cle === hier) return "Hier";
-  return d.toLocaleDateString("fr-FR", {
-    timeZone: "Europe/Paris",
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
-}
-
-function heureRecue(ts) {
-  return new Date(ts).toLocaleTimeString("fr-FR", {
-    timeZone: "Europe/Paris",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function formatDate(date) {
-  if (!date) return null;
-  const txt = new Date(`${date}T12:00:00Z`).toLocaleDateString("fr-FR", {
-    weekday: "short",
-    day: "numeric",
-    month: "long",
-    timeZone: "UTC",
-  });
-  return txt.charAt(0).toUpperCase() + txt.slice(1);
-}
-
-function formatHeure(heure) {
-  if (!heure) return null;
-  const [h, m] = heure.split(":");
-  return m === "00" ? `${Number(h)} h` : `${Number(h)} h ${m}`;
-}
-
-function iconePreference(p) {
-  const t = p.toLowerCase();
-  if (t.includes("terrasse")) return Umbrella;
-  if (t.includes("anniversaire")) return Cake;
-  if (t.includes("poussette") || t.includes("enfant") || t.includes("bébé")) return Baby;
-  return Star;
-}
-
 // ---------- Page ----------
 
 export default async function Page({ searchParams }) {
   const { onglet = "a_confirmer" } = await searchParams;
   const actif = ONGLETS[onglet] ? onglet : "a_confirmer";
 
-  const { data: demandes, error } = await supabase
-    .from("demandes")
-    .select("*")
-        .in("statut", ONGLETS[actif].statuts)
-    .eq("anonymise", false)
-    .order("created_at", { ascending: false });
-
-  const { count } = await supabase
-    .from("demandes")
-    .select("id", { count: "exact", head: true })
-        .in("statut", ONGLETS.a_confirmer.statuts)
-    .eq("anonymise", false);
-
-      // Détection des doublons : même numéro + même date
-  const { data: actives } = await supabase
-    .from("demandes")
-    .select("id, telephone_appelant, telephone_dicte, date_reservation")
-    .in("statut", STATUTS_DOUBLON)
-        .not("date_reservation", "is", null)
-    .eq("anonymise", false);
+  // Les 3 requêtes partent en même temps (au lieu de l'une après l'autre)
+  const [{ data: demandes, error }, { count }, { data: actives }] = await Promise.all([
+    supabase
+      .from("demandes")
+      .select(COLONNES_LISTE)
+      .in("statut", ONGLETS[actif].statuts)
+      .eq("anonymise", false)
+      .order("created_at", { ascending: false })
+      .limit(MAX_LISTE),
+    supabase
+      .from("demandes")
+      .select("id", { count: "exact", head: true })
+      .in("statut", ONGLETS.a_confirmer.statuts)
+      .eq("anonymise", false),
+    // Détection des doublons : même numéro + même date
+    supabase
+      .from("demandes")
+      .select("id, telephone_appelant, telephone_dicte, date_reservation")
+      .in("statut", STATUTS_DOUBLON)
+      .not("date_reservation", "is", null)
+      .eq("anonymise", false),
+  ]);
 
   const parCle = new Map();
   for (const a of actives ?? []) {
@@ -115,11 +64,11 @@ export default async function Page({ searchParams }) {
   }
   const estDoublon = (d) =>
     STATUTS_DOUBLON.includes(d.statut) && clesDoublon(d).some((k) => (parCle.get(k) ?? 0) > 1);
-  
+
   // Regroupement par jour de réception
   const groupes = [];
   for (const d of demandes ?? []) {
-    const jour = libelleJour(d.created_at);
+    const jour = libelleJourRecu(d.created_at);
     const dernier = groupes[groupes.length - 1];
     if (dernier && dernier.jour === jour) dernier.items.push(d);
     else groupes.push({ jour, items: [d] });
@@ -128,13 +77,13 @@ export default async function Page({ searchParams }) {
   return (
     <div className="min-h-screen pb-28">
       <main className="mx-auto max-w-xl px-5 pt-8">
-                <RafraichirAuto />
+        <RafraichirAuto />
         {/* En-tête */}
         <div className="flex items-center justify-between mb-5">
           <h1 className="font-[family-name:var(--font-titre)] text-4xl font-bold text-[#163728]">
             Réservations
           </h1>
-                    <Link href="/parametres" aria-label="Paramètres" className="p-2 -mr-2 text-stone-500">
+          <Link href="/parametres" aria-label="Paramètres" className="p-2 -mr-2 text-stone-500">
             <Settings size={24} />
           </Link>
         </div>
@@ -170,7 +119,7 @@ export default async function Page({ searchParams }) {
               {g.items.map((d, i) => {
                 const enAvant = actif === "a_confirmer" && gi === 0 && i === 0;
                 const analysee = d.statut !== "a_traiter" && d.statut !== "erreur";
-                const alerte = d.infos_manquantes.length > 0 || d.ambiguites.length > 0;
+                const alerte = d.infos_manquantes?.length > 0 || d.ambiguites?.length > 0;
 
                 return (
                   <li key={d.id}>
@@ -194,7 +143,7 @@ export default async function Page({ searchParams }) {
                             {d.nom || "Nom non indiqué"}
                           </p>
                           <span className="flex items-center text-sm text-stone-500 shrink-0">
-                            {heureRecue(d.created_at)}
+                            {heureParis(d.created_at)}
                             <ChevronRight size={16} className="ml-1" />
                           </span>
                         </div>
@@ -210,7 +159,7 @@ export default async function Page({ searchParams }) {
                           <div className="mt-1 space-y-1 text-stone-700">
                             <p className="flex items-center gap-2">
                               <CalendarDays size={16} className="text-stone-500" />
-                              {formatDate(d.date_reservation) || "Date ?"} ·{" "}
+                              {formatDateCourte(d.date_reservation) || "Date ?"} ·{" "}
                               {formatHeure(d.heure) || "Heure ?"}
                             </p>
                             <p className="flex items-center gap-2">
@@ -223,7 +172,7 @@ export default async function Page({ searchParams }) {
                           </div>
                         )}
 
-                        {d.preferences.length > 0 && (
+                        {d.preferences?.length > 0 && (
                           <div className="flex flex-wrap gap-2 mt-3">
                             {d.preferences.slice(0, 2).map((p) => {
                               const Icone = iconePreference(p);
@@ -251,7 +200,7 @@ export default async function Page({ searchParams }) {
                             Infos à vérifier
                           </p>
                         )}
-                         {estDoublon(d) && (
+                        {estDoublon(d) && (
                           <p className="flex items-center gap-1.5 text-sm text-amber-800 mt-2">
                             <Copy size={14} />
                             Doublon possible
@@ -265,9 +214,15 @@ export default async function Page({ searchParams }) {
             </ul>
           </section>
         ))}
+
+        {demandes?.length === MAX_LISTE && (
+          <p className="text-sm text-stone-500 text-center mt-6">
+            Seules les {MAX_LISTE} demandes les plus récentes sont affichées.
+          </p>
+        )}
       </main>
 
-     <BarreBas actif="reservations" />
+      <BarreBas actif="reservations" />
     </div>
   );
 }

@@ -40,9 +40,9 @@ export default function Parametres() {
           <p className="flex items-center gap-3 font-semibold mb-2">
             <ShieldCheck size={20} className="text-stone-500" /> Conservation des données
           </p>
-                    <p className="text-stone-600 leading-relaxed">
-            <strong>{JOURS_CONSERVATION} jours après la date de réservation</strong> (ou après l'appel
-            si aucune date n'a été comprise), l'enregistrement audio, la transcription, le nom et le
+          <p className="text-stone-600 leading-relaxed">
+            <strong>{JOURS_CONSERVATION} jours après la date de réservation</strong> (ou après l’appel
+            si aucune date n’a été comprise), l’enregistrement audio, la transcription, le nom et le
             numéro du client sont effacés automatiquement. Seuls des chiffres anonymes sont conservés
             pour les statistiques.
           </p>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Activity, MessageCircle, CalendarDays } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import BarreBas from "../components/BarreBas";
+import { cleJour } from "../lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -15,8 +16,14 @@ const PERIODES = {
 
 // ---------- Outils ----------
 
-const cleJour = (date) =>
-  new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris" }).format(date);
+// Minuit heure de Paris pour un jour donné, ex. "2026-11-09T00:00:00+01:00"
+function minuitParis(jour) {
+  const decalage = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Paris", timeZoneName: "longOffset" })
+    .formatToParts(new Date(`${jour}T12:00:00Z`))
+    .find((p) => p.type === "timeZoneName")
+    .value.replace("GMT", "");
+  return `${jour}T00:00:00${decalage || "+00:00"}`;
+}
 
 // Date de début de la période (format AAAA-MM-JJ), ou null pour "Tout"
 function debutPeriode(periode) {
@@ -77,11 +84,20 @@ export default async function Statistiques({ searchParams }) {
   const debut = debutPeriode(periode);
 
   // 1. Demandes de la période (selon la date de l'appel)
-  let requete = supabase
-    .from("demandes")
-    .select("statut, nb_personnes, sms_statut, created_at");
-  if (debut) requete = requete.gte("created_at", `${debut}T00:00:00`);
-  const { data } = await requete;
+  // 2. Couverts confirmés des 7 prochains jours
+  // Les deux requêtes partent en même temps
+  const jours = septJours();
+  let requete = supabase.from("demandes").select("statut, nb_personnes, sms_statut");
+  if (debut) requete = requete.gte("created_at", minuitParis(debut));
+  const [{ data }, { data: aVenir }] = await Promise.all([
+    requete,
+    supabase
+      .from("demandes")
+      .select("date_reservation, nb_personnes")
+      .eq("statut", "confirmee")
+      .gte("date_reservation", jours[0])
+      .lte("date_reservation", jours[6]),
+  ]);
   const r = data ?? [];
 
   const compte = (...statuts) => r.filter((d) => statuts.includes(d.statut)).length;
@@ -92,15 +108,6 @@ export default async function Statistiques({ searchParams }) {
     : "—";
   const smsEnvoyes = r.filter((d) => ["envoye", "delivre"].includes(d.sms_statut)).length;
   const smsEchec = r.filter((d) => d.sms_statut === "echec").length;
-
-  // 2. Couverts confirmés des 7 prochains jours
-  const jours = septJours();
-  const { data: aVenir } = await supabase
-    .from("demandes")
-    .select("date_reservation, nb_personnes")
-    .eq("statut", "confirmee")
-    .gte("date_reservation", jours[0])
-    .lte("date_reservation", jours[6]);
 
   const parJour = jours.map((iso) => ({
     iso,
@@ -175,7 +182,7 @@ export default async function Statistiques({ searchParams }) {
           </ul>
         </Carte>
 
-                <p className="text-sm text-stone-500 text-center">
+        <p className="text-sm text-stone-500 text-center">
           Les statistiques sont conservées sans limite, sous forme anonyme.
         </p>
       </main>

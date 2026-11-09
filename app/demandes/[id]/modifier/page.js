@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { ChevronLeft } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import BoutonEnvoi from "../../../components/BoutonEnvoi";
@@ -60,6 +61,7 @@ async function sauvegarder(formData) {
     .eq("statut", "a_confirmer"); // on ne modifie pas une demande déjà traitée
 
   if (error) throw new Error(error.message);
+  revalidatePath("/", "layout");
   redirect(`/demandes/${id}`);
 }
 
@@ -77,8 +79,8 @@ const input =
 
 export default async function ModifierDemande({ params }) {
   const { id } = await params;
-  const { data: d, error } = await supabase.from("demandes").select("*").eq("id", id).single();
-  if (error || !d) notFound();
+  const { data: d, error } = await supabase.from("demandes").select("*").eq("id", id).maybeSingle();
+  if (error || !d || d.anonymise) notFound();
   if (d.statut !== "a_confirmer") redirect(`/demandes/${id}`);
 
   return (
@@ -88,7 +90,7 @@ export default async function ModifierDemande({ params }) {
           <Link href={`/demandes/${id}`} className="p-2 -ml-2 text-stone-700" aria-label="Retour">
             <ChevronLeft size={26} />
           </Link>
-                    <h1 className="flex-1 text-center font-medium text-stone-800 -ml-8 pointer-events-none">Modifier la demande</h1>
+          <h1 className="flex-1 text-center font-medium text-stone-800 -ml-8 pointer-events-none">Modifier la demande</h1>
         </div>
       </header>
 
@@ -128,7 +130,7 @@ export default async function ModifierDemande({ params }) {
 
         <section className="bg-white rounded-2xl border border-stone-200 p-5 space-y-4">
           <Champ label="Préférences (séparées par des virgules)">
-            <input name="preferences" defaultValue={d.preferences.join(", ")} className={input} />
+            <input name="preferences" defaultValue={(d.preferences ?? []).join(", ")} className={input} />
           </Champ>
           <Champ label="La préférence peut-elle être satisfaite ?">
             <select name="table_pref_statut" defaultValue={d.table_pref_statut} className={input}>

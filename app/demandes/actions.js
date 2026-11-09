@@ -1,12 +1,18 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { supabase } from "../lib/supabase";
 import { numerosSMS } from "../lib/sms";
 import { envoyerSMS } from "../lib/twilio";
 import { nettoyerSMS, couperSMS } from "../lib/gsm";
 
 const SMS_RENVOYABLES = ["echec", "non_envoye"];
+
+// Après une action : toutes les pages gardées en cache sur le téléphone sont rechargées
+function rafraichirTout() {
+  revalidatePath("/", "layout");
+}
 
 function lireTexte(formData) {
   return couperSMS(nettoyerSMS(String(formData.get("sms_texte") ?? "").trim()));
@@ -78,6 +84,7 @@ async function decider(formData, nouveauStatut, exigerComplet) {
     }
   }
 
+  rafraichirTout();
   redirect(`/demandes/${id}`);
 }
 
@@ -111,6 +118,7 @@ export async function renvoyerSMS(formData) {
     if (d) await envoyerEtEnregistrer(id, numero, texte);
   }
 
+  rafraichirTout();
   redirect(`/demandes/${id}`);
 }
 
@@ -134,5 +142,6 @@ export async function supprimerDemande(formData) {
   const { error } = await supabase.from("demandes").delete().eq("id", id);
   if (error) throw new Error(error.message);
 
+  rafraichirTout();
   redirect("/");
 }

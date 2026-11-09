@@ -51,6 +51,7 @@ export async function purgerAnciennes() {
         transcription: null,
         audio_path: null,
         date_expression: null,
+        remarques: null,
         preferences: [],
         infos_manquantes: [],
         ambiguites: [],

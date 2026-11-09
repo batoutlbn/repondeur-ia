@@ -10,16 +10,12 @@ import {
   FileText,
   Mic,
   TriangleAlert,
-  Umbrella,
-  Cake,
-  Baby,
-  Star,
   MessageCircle,
   Copy,
   StickyNote,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
-import { formatDateLongue, formatHeure, formatTel } from "../../lib/format";
+import { formatDateLongue, formatHeure, formatTel, iconePreference } from "../../lib/format";
 import { texteSMS, texteRefus, numerosSMS, preferencesPlacement } from "../../lib/sms";
 import DecisionReservation from "../../components/DecisionReservation";
 import BoutonSupprimer from "../../components/BoutonSupprimer";
@@ -45,14 +41,6 @@ const SMS_STATUTS = {
   pas_de_numero: { label: "Aucun numéro mobile : contacter le client autrement", classe: "text-orange-700" },
 };
 
-function iconePreference(p) {
-  const t = p.toLowerCase();
-  if (t.includes("terrasse")) return Umbrella;
-  if (t.includes("anniversaire")) return Cake;
-  if (t.includes("poussette") || t.includes("enfant") || t.includes("bébé")) return Baby;
-  return Star;
-}
-
 function Carte({ children }) {
   return <section className="bg-white rounded-2xl border border-stone-200 p-5">{children}</section>;
 }
@@ -69,40 +57,9 @@ function Ligne({ icone: Icone, children, manquant }) {
 export default async function FicheDemande({ params }) {
   const { id } = await params;
 
-  const { data: d, error } = await supabase.from("demandes").select("*").eq("id", id).single();
-    if (error || !d || d.anonymise) notFound();
+  const { data: d, error } = await supabase.from("demandes").select("*").eq("id", id).maybeSingle();
+  if (error || !d || d.anonymise) notFound();
 
-  // Lien temporaire (10 min) vers l'audio privé
-  let audioUrl = null;
-  if (d.audio_path) {
-    const { data } = await supabase.storage
-      .from("enregistrements")
-      .createSignedUrl(d.audio_path, 600);
-    audioUrl = data?.signedUrl ?? null;
-  }
-
-  const badge = BADGES[d.statut] ?? BADGES.a_confirmer;
-  const telAppelant = formatTel(d.telephone_appelant);
-  const telDicte = formatTel(d.telephone_dicte);
-  const aVerifier = [...d.infos_manquantes.map((i) => `Manquant : ${i}`), ...d.ambiguites];
-
-  // Données pour les fenêtres de décision
-    const numeros = numerosSMS(d).map((n) => ({ ...n, affichage: formatTel(n.numero) }));
-    const placement = preferencesPlacement(d);
-  const bloque =
-    !d.date_reservation || !d.heure || d.nb_personnes == null
-      ? "Complète la date, l'heure et le nombre de personnes (bouton Modifier) avant de valider."
-      : null;
-  const recap = {
-    personnes: `${d.nom || "Client"} · ${d.nb_personnes ?? "?"} personne${d.nb_personnes > 1 ? "s" : ""}`,
-    quand: `${formatDateLongue(d.date_reservation) ?? "?"} à ${formatHeure(d.heure) ?? "?"}`,
-    placement: placement.length ? `${placement.join(", ")} — confirmé` : null,
-  };
-  const decidee = d.statut === "confirmee" || d.statut === "refusee";
-  const smsStatut = SMS_STATUTS[d.sms_statut] ?? SMS_STATUTS.non_envoye;
-    // Rafraîchir seulement pendant l'analyse ou l'envoi du SMS
-  const enCours = d.statut === "a_traiter" || ["en_attente", "envoye"].includes(d.sms_statut);
-    const peutRenvoyer = decidee && ["echec", "non_envoye"].includes(d.sms_statut);
   // Autres demandes du même numéro pour la même date
   let doublons = [];
   if (d.date_reservation && STATUTS_DOUBLON.includes(d.statut)) {
@@ -115,9 +72,32 @@ export default async function FicheDemande({ params }) {
     const mesCles = new Set(clesDoublon(d));
     doublons = (memeDate ?? []).filter((x) => clesDoublon(x).some((k) => mesCles.has(k)));
   }
+
+  const badge = BADGES[d.statut] ?? BADGES.a_confirmer;
+  const telAppelant = formatTel(d.telephone_appelant);
+  const telDicte = formatTel(d.telephone_dicte);
+  const aVerifier = [...(d.infos_manquantes ?? []).map((i) => `Manquant : ${i}`), ...(d.ambiguites ?? [])];
+
+  // Données pour les fenêtres de décision
+  const numeros = numerosSMS(d).map((n) => ({ ...n, affichage: formatTel(n.numero) }));
+  const placement = preferencesPlacement(d);
+  const bloque =
+    !d.date_reservation || !d.heure || d.nb_personnes == null
+      ? "Complète la date, l'heure et le nombre de personnes (bouton Modifier) avant de valider."
+      : null;
+  const recap = {
+    personnes: `${d.nom || "Client"} · ${d.nb_personnes ?? "?"} personne${d.nb_personnes > 1 ? "s" : ""}`,
+    quand: `${formatDateLongue(d.date_reservation) ?? "?"} à ${formatHeure(d.heure) ?? "?"}`,
+    placement: placement.length ? `${placement.join(", ")} — confirmé` : null,
+  };
+  const decidee = d.statut === "confirmee" || d.statut === "refusee";
+  const smsStatut = SMS_STATUTS[d.sms_statut] ?? SMS_STATUTS.non_envoye;
+  // Rafraîchir seulement pendant l'analyse ou l'envoi du SMS
+  const enCours = d.statut === "a_traiter" || ["en_attente", "envoye"].includes(d.sms_statut);
+  const peutRenvoyer = decidee && ["echec", "non_envoye"].includes(d.sms_statut);
   return (
     <div className="min-h-screen pb-32">
-            {/* Barre du haut */}
+      {/* Barre du haut */}
       <header>
         <div className="mx-auto max-w-xl px-4 h-14 flex items-center">
           <Link href="/" className="p-2 -ml-2 text-stone-700" aria-label="Retour">
@@ -129,7 +109,7 @@ export default async function FicheDemande({ params }) {
           <BoutonSupprimer id={d.id} />
         </div>
       </header>
-      {enCours && <RafraichirAuto intervalle={5000} />}
+      {enCours && <RafraichirAuto intervalle={5000} arretApres={120000} />}
       <main className="mx-auto max-w-xl px-4 space-y-4">
         {/* Infos principales */}
         <Carte>
@@ -189,7 +169,7 @@ export default async function FicheDemande({ params }) {
               <p className="mt-3 bg-[#f1f0ec] rounded-xl p-3 text-stone-700 leading-relaxed">{d.sms_texte}</p>
             )}
             {d.sms_erreur && <p className="text-sm text-red-700 mt-2">{d.sms_erreur}</p>}
-                      {peutRenvoyer && (
+            {peutRenvoyer && (
               <div className="mt-4">
                 <DecisionReservation
                   mode="renvoyer"
@@ -247,7 +227,7 @@ export default async function FicheDemande({ params }) {
         )}
 
         {/* Préférences */}
-        {d.preferences.length > 0 && (
+        {d.preferences?.length > 0 && (
           <Carte>
             <p className="flex items-center gap-3 font-semibold mb-3">
               <ListFilter size={20} className="text-stone-500" /> Préférences
@@ -291,8 +271,8 @@ export default async function FicheDemande({ params }) {
               <span className="font-normal text-stone-500">· {d.duree_secondes} s</span>
             )}
           </p>
-          {audioUrl ? (
-            <audio controls preload="none" src={audioUrl} className="w-full" />
+          {d.audio_path ? (
+            <audio controls preload="none" src={`/api/audio/${d.id}`} className="w-full" />
           ) : (
             <p className="text-stone-500">Audio indisponible.</p>
           )}
@@ -311,7 +291,7 @@ export default async function FicheDemande({ params }) {
 
       {/* Boutons du bas */}
       {d.statut === "a_confirmer" && (
-                <div className="fixed bottom-0 inset-x-0 z-20 bg-[#faf9f6] border-t border-stone-200">
+        <div className="fixed bottom-0 inset-x-0 z-20 bg-[#faf9f6] border-t border-stone-200">
           <div className="mx-auto max-w-xl px-4 py-3 grid grid-cols-[1fr_1fr_2fr] gap-2">
             <Link
               href={`/demandes/${d.id}/modifier`}
