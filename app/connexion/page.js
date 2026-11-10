@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import BoutonEnvoi from "../components/BoutonEnvoi";
@@ -28,6 +29,14 @@ export default async function Connexion({ searchParams }) {
   return (
     <main className="min-h-screen flex items-center justify-center px-5">
       <div className="w-full max-w-sm">
+        <Image
+          src="/logo.png"
+          alt="Le Bonnet Blanc"
+          width={446}
+          height={448}
+          priority
+          className="w-40 h-auto mx-auto mb-6 mix-blend-multiply"
+        />
         <h1 className="font-[family-name:var(--font-titre)] text-4xl font-bold text-[#163728] text-center mb-2">
           Réservations
         </h1>

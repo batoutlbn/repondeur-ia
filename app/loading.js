@@ -1,10 +1,9 @@
+// Écran d'accueil : s'affiche à l'ouverture de l'app pendant le chargement des réservations
 export default function Chargement() {
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="flex flex-col items-center gap-3 text-stone-500">
-        <div className="w-8 h-8 rounded-full border-4 border-stone-200 border-t-[#1f4a3a] animate-spin" />
-        Chargement…
-      </div>
+    <div className="fixed inset-0 z-50 bg-white flex items-center justify-center">
+      {/* eslint-disable-next-line @next/next/no-img-element -- SVG animé (le cercle se dessine) */}
+      <img src="/logo-anime.svg" alt="Le Bonnet Blanc" width={240} height={240} className="w-60 h-60" />
     </div>
   );
 }
